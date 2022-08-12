@@ -1,0 +1,18 @@
+{
+  "template": "https://github.com/woltapp/wolt-python-package-cookiecutter",
+  "commit": "6669a067eeaaed3bee84312428a3e94cd13295f2",
+  "checkout": null,
+  "context": {
+    "cookiecutter": {
+      "author_name": "Vilmos Prokaj",
+      "author_email": "prokaj.vilmos@gmail.com",
+      "github_username": "prokaj",
+      "project_name": "canvas",
+      "project_slug": "canvas",
+      "package_name": "canvas",
+      "project_short_description": "Automate some canvas related tasks",
+      "_template": "https://github.com/woltapp/wolt-python-package-cookiecutter"
+    }
+  },
+  "directory": null
+}
