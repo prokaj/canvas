@@ -1,0 +1,4 @@
+canvasapi==2.2.0
+ipywidgets
+IPython
+tqdm
