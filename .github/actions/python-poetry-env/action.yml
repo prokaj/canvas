@@ -13,6 +13,9 @@ runs:
     - uses: actions/setup-python@v2
       with:
         python-version: ${{inputs.python-version}}
+    - name: Downgrade setuptools workaround
+      run: python -m pip install --force-reinstall setuptools==60.8.2
+      shell: bash
     - name: Install poetry
       run: python -m pip install poetry
       shell: bash
