@@ -73,7 +73,7 @@ def get_canvas(setting: Union[None, dict] = None) -> canvasapi.Canvas:  # type: 
 
 def get_course(  # type: ignore
     setting: Optional[Dict] = None, course_name: Optional[str] = None
-) -> canvasapi.Course:
+) -> canvasapi.course.Course:
     if setting is None:
         setting = read_setting()
     course_data = setting if course_name is None else setting[course_name]
@@ -84,12 +84,12 @@ def get_course(  # type: ignore
 
 
 def upload_pdf(  # type: ignore
-    course: canvasapi.Course,
+    course: canvasapi.course.Course,
     filename: str,
     canvasname: Optional[str] = None,
     localdir: Optional[str] = None,
     folder_name: Optional[str] = None,
-) -> Optional[canvasapi.File]:
+) -> Optional[canvasapi.file.File]:
     if localdir is None:
         if folder_name is None:
             folder_name = course.local_data["pdf_canvas"]
@@ -123,8 +123,8 @@ def upload_pdf(  # type: ignore
 def file_upload(  # type: ignore
     file: str,
     folder_name: Optional[str] = None,
-    course: Optional[canvasapi.Course] = None,
-) -> canvasapi.File:
+    course: Optional[canvasapi.course.Course] = None,
+) -> canvasapi.file.File:
     course = get_course() if course is None else course
     folders = course.get_folders()
     if folder_name is None:
@@ -139,7 +139,7 @@ def file_upload(  # type: ignore
     return folder.upload(file, on_duplicate="overwrite")
 
 
-def get_file(path: str) -> canvasapi.File:  # type: ignore
+def get_file(path: str) -> canvasapi.file.File:  # type: ignore
     path_elements = path.split("/")
     file_name = path_elements.pop()
     path_elements = path_elements[::-1]
@@ -156,16 +156,16 @@ def get_file_id(path: str) -> int:
     return int(get_file(path).id)
 
 
-def get_path(x: canvasapi.File) -> str:  # type: ignore
+def get_path(x: canvasapi.file.File) -> str:  # type: ignore
     return str(x.full_name).replace("course files", "")
 
 
-def file_key(f: canvasapi.File, course: canvasapi.Course) -> str:  # type: ignore
+def file_key(f: canvasapi.file.File, course: canvasapi.course.Course) -> str:  # type: ignore
     key = f"{course.get_folder(f.folder_id).full_name}/{f.display_name}"
     return key.replace("course files/", "")
 
 
-def file_url_dict(course: canvasapi.Course) -> Dict:  # type: ignore
+def file_url_dict(course: canvasapi.course.Course) -> Dict:  # type: ignore
     files = {
         file_key(f, course): {
             "course_id": course.id,
@@ -268,7 +268,7 @@ def make_assignment(
 restypes = {"image": ("images", "<img src=")}
 
 
-def upload_resources(assgn: Dict, course: canvasapi.Course) -> Dict:  # type: ignore
+def upload_resources(assgn: Dict, course: canvasapi.course.Course) -> Dict:  # type: ignore
     resources = assgn.get("resources", {})
     if len(resources):
         html = assgn["description"]
@@ -281,7 +281,7 @@ def upload_resources(assgn: Dict, course: canvasapi.Course) -> Dict:  # type: ig
     return assgn
 
 
-def update_front_page(course: canvasapi.Course, root: str = "../") -> canvasapi.Course:  # type: ignore
+def update_front_page(course: canvasapi.course.Course, root: str = "../") -> canvasapi.course.Course:  # type: ignore
     read_setting()
     # course_name = [k for k,v in setting.items() if v==course.id][0]
     index_md = course.local_data["index_local"]
@@ -389,7 +389,7 @@ def all_questions(lst: List) -> Generator[Dict, None, None]:
             yield x
 
 
-def create_quiz(course: canvasapi.Course, data: List, progress: Optional[bool] = True) -> Any:  # type: ignore
+def create_quiz(course: canvasapi.course.Course, data: List, progress: Optional[bool] = True) -> Any:  # type: ignore
     def id(x: Any, **kwargs: Any) -> Any:
         return x
 
@@ -460,7 +460,7 @@ def set_points(x: Dict) -> None:
         y["points_possible"] = x["question_points"]
 
 
-def mk_quiz(qdata: Dict, course: canvasapi.Course) -> Any:  # type: ignore
+def mk_quiz(qdata: Dict, course: canvasapi.course.Course) -> Any:  # type: ignore
     quiz = course.create_quiz(quiz=mk_quiz_dict(qdata))
     for q in tqdm(qdata["questions"]):
         if q["type"] == "quizgroup":
@@ -494,7 +494,7 @@ def get_json_data(json_file: str) -> List:
     return sdata
 
 
-def convert_json_to_quiz(json_file: str, course: canvasapi.Course) -> None:  # type: ignore
+def convert_json_to_quiz(json_file: str, course: canvasapi.course.Course) -> None:  # type: ignore
     for qdata in get_json_data(json_file):
         quiz = mk_quiz(qdata, course)
         print(f'creating quiz: {quiz.id} ("{quiz.title}")')

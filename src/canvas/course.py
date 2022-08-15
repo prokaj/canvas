@@ -1,6 +1,6 @@
 import itertools
 import random
-from typing import Any, Callable, Dict, Generator, List, Union
+from typing import Any, Callable, Dict, Generator, Iterator, List, Union
 
 import canvasapi  # type: ignore
 import ipywidgets as widgets  # type: ignore
@@ -18,7 +18,7 @@ def add_title(feladatok: Union[List[str], str]) -> Dict:
     return {"A": feladatok}
 
 
-def split(x: List, n: int) -> Generator[List, None, None]:
+def split(x: List, n: int) -> Iterator[List]:
     s: float = 0
     delta: float = len(x) / n
     for _ in range(1, n + 1):
@@ -27,7 +27,7 @@ def split(x: List, n: int) -> Generator[List, None, None]:
         s += delta
 
 
-def get_students(course: canvasapi.course, filter: Callable) -> List:  # type: ignore
+def get_students(course: canvasapi.course.Course, filter: Callable) -> List:  # type: ignore
     return [
         x.user_id for x in course.get_enrollments(type="StudentEnrollment") if filter(x)
     ]
@@ -82,7 +82,7 @@ def confirm_delete(exs: List, callback: Callable) -> None:
     display(widgets.VBox([out, w0]))
 
 
-def del_assignments(course: canvasapi.Course, title: str) -> None:  # type: ignore
+def del_assignments(course: canvasapi.course.Course, title: str) -> None:  # type: ignore
     def cb(x: canvasapi.Assignment) -> None:  # type: ignore
         if x.has_submitted_submissions:
             print(f"not deleting {x.name}, {x.id}. there are submissions!")
@@ -93,7 +93,7 @@ def del_assignments(course: canvasapi.Course, title: str) -> None:  # type: igno
     confirm_delete(course.get_assignments(search_term=title), cb)
 
 
-def publish_assignments(course: canvasapi.Course, title: str) -> None:  # type: ignore
+def publish_assignments(course: canvasapi.course.Course, title: str) -> None:  # type: ignore
     for x in course.get_assignments(search_term=title):
         print(f"publishing {x.name}, {x.id} ")
         x.edit(assignment=dict(published=True))
