@@ -12,6 +12,7 @@ from typing import (
     Iterator,
     List,
     Optional,
+    Sequence,
     TextIO,
     Tuple,
     Union,
@@ -42,16 +43,13 @@ def pandoc_cmd() -> str:
     )
     if not pandoc:
         raise FileNotFoundError("pandoc not found")
-    # pandoc = pandoc[0]
+
     version, path = pandoc[0]
     if version[0] < 2:
         raise FileNotFoundError(
             f'only too old pandoc version ({".".join(map(str,version))}) found: {path}'
         )
     return path
-
-
-# pandoc_cmd = f"{os.environ['HOME']}/local/bin/pandoc"
 
 
 def read_setting(root: str = ".") -> Any:
@@ -171,9 +169,7 @@ def file_url_dict(course: canvasapi.course.Course) -> Dict:  # type: ignore
             "course_id": course.id,
             "id": f.id,
             "url": download_url(course.id, f.id),
-            # f.url,
-            "preview_url": preview_url(course.id, f.id)
-            # getattr(f,"preview_url",None)
+            "preview_url": preview_url(course.id, f.id),
         }
         for f in course.get_files()
     }
@@ -223,11 +219,10 @@ def make_assignment(
     visibility: Any = None,
     root: str = "../",
     math: str = "mathml",
-    filters: List[str] = ["href_filter"],
-    # course=None
+    filters: Sequence[str] = ("href_filter"),
 ) -> Dict:
-    filter = " ".join(map(lambda x: f"--lua-filter {root}{x}.lua", filters))
-    cmd = f"lua {root}extract.lua {fel} | {pandoc_cmd()} -f latex+raw_tex --{math} -t html {filter}"
+    lua_filter = " ".join(f"--lua-filter {root}{x}.lua" for x in filters)
+    cmd = f"lua {root}extract.lua {fel} | {pandoc_cmd()} -f latex+raw_tex --{math} -t html {lua_filter}"
     # --lua-filter {root}href_filter.lua"
 
     out = subprocess.run(cmd, shell=True, capture_output=True)
@@ -241,28 +236,26 @@ def make_assignment(
 
     htmls = html.split("----0123456789----\n")
     resources = [x.split("\n")[-2:] for x in htmls[:-1]]
-    # resources = {x[-2]:x[-1] for x in resources}
     html = htmls[-1]
-    # imgs = {svg: file_upload(svg,'images',course) for svg in svgs}
-    # for k, (ok, v) in imgs.items():
-    #     if ok:
-    #         html = html.replace(f"<img src=\"{k}\"",f"<img src=\"{v['url']}\"")
-    # # print(html)
-    return dict(
-        due_at=due_at.isoformat(),
-        points_possible=points,
-        allowed_extensions="pdf,png,jpg".split(","),
-        submission_types=["online_text_entry", "online_upload"],
-        description=html,
-        name=name,
-        assignment_overrides=[
-            dict(due_at=due_at.isoformat(), student_ids=visibility, title=group_name)
+    return {
+        "due_at": due_at.isoformat(),
+        "points_possible": points,
+        "allowed_extensions": "pdf,png,jpg".split(","),
+        "submission_types": ["online_text_entry", "online_upload"],
+        "description": html,
+        "name": name,
+        "assignment_overrides": [
+            {
+                "due_at": due_at.isoformat(),
+                "student_ids": visibility,
+                "title": group_name,
+            }
         ]
         if visibility is not None
         else None,
-        only_visible_to_overrides=visibility is not None,
-        resources=resources,
-    )
+        "only_visible_to_overrides": visibility is not None,
+        "resources": resources,
+    }
 
 
 restypes = {"image": ("images", "<img src=")}
@@ -283,15 +276,12 @@ def upload_resources(assgn: Dict, course: canvasapi.course.Course) -> Dict:  # t
 
 def update_front_page(course: canvasapi.course.Course, root: str = "../") -> canvasapi.course.Course:  # type: ignore
     read_setting()
-    # course_name = [k for k,v in setting.items() if v==course.id][0]
     index_md = course.local_data["index_local"]
     cmd = (
         f"cat  {index_md} |lua {root}preprocess_macros.lua"
         f"|{pandoc_cmd()} --mathml -t html --lua-filter {root}href_filter.lua"
     )
-    # print(cmd)
     out = subprocess.run(cmd, shell=True, capture_output=True)
-    # print(out.stdout)
     if out.returncode != 0:
         print(out.stderr)
         return
@@ -368,9 +358,6 @@ def question_iter(x: Dict) -> Generator[Dict, None, None]:
     if x["question_type"] in pandoc_ans:
         for a in x["answers"]:
             yield from answer_iter(a)
-    # else:
-    #    for a in x['answers']:
-    #        a['answer_text'] = a.pop('text', '')
 
 
 def answer_iter(x: Dict) -> Generator[Dict, None, None]:
@@ -390,10 +377,10 @@ def all_questions(lst: List) -> Generator[Dict, None, None]:
 
 
 def create_quiz(course: canvasapi.course.Course, data: List, progress: Optional[bool] = True) -> Any:  # type: ignore
-    def id(x: Any, **kwargs: Any) -> Any:
+    def id_fun(x: Any, **kwargs: Any) -> Any:
         return x
 
-    tqdm_ = tqdm if progress else id
+    tqdm_ = tqdm if progress else id_fun
     data = pandoc_quiz_data(data)
     # data is a list of quiz dictionaries
     with open("/dev/null", "w") as dev_null:
@@ -420,9 +407,10 @@ def create_quiz(course: canvasapi.course.Course, data: List, progress: Optional[
             )
             sum(q.get("pick_count", 1) for q in x["questions"])
             quiz.edit(
-                quiz=dict(
-                    question_count=len(x["questions"]), points_possible=points_total
-                )
+                quiz={
+                    "question_count": len(x["questions"]),
+                    "points_possible": points_total,
+                }
             )
     return quiz
 
@@ -434,7 +422,7 @@ def mk_ans(x: Dict, i: int, use_pandoc: bool = True) -> Dict:
         a["answer_html"] = pandoc_text(x["text"], src_format="latex")
     else:
         a["answer_text"] = x["text"]
-    a["blank_id"] = x["blank_id"][1:-1] if "blank_id" in x else None  # f'response{i}'
+    a["blank_id"] = x["blank_id"][1:-1] if "blank_id" in x else None
     return a
 
 
@@ -464,7 +452,6 @@ def mk_quiz(qdata: Dict, course: canvasapi.course.Course) -> Any:  # type: ignor
     quiz = course.create_quiz(quiz=mk_quiz_dict(qdata))
     for q in tqdm(qdata["questions"]):
         if q["type"] == "quizgroup":
-            # set_points(q)
             quizgroup = quiz.create_question_group(
                 quiz_groups=[{k: v for k, v in q.items() if k in qgargs}]
             )
@@ -475,7 +462,7 @@ def mk_quiz(qdata: Dict, course: canvasapi.course.Course) -> Any:  # type: ignor
 
 def get_json_data(json_file: str) -> List:
     with open(json_file) as f:
-        txt = "".join(f.readlines())  # .replace("\\","\\\\")
+        txt = "".join(f.readlines())
         data = json.loads(txt)
 
     sdata = []

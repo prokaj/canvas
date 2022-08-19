@@ -9,7 +9,7 @@ from IPython import display  # type: ignore
 
 def mk_fel(feladatok: List[List[str]], prefix: str = "") -> List[str]:
     prefix_str = f'--prefix="{prefix}" '
-    return list(map(lambda x: prefix_str + " ".join(x), itertools.product(*feladatok)))
+    return [prefix_str + " ".join(x) for x in itertools.product(*feladatok)]
 
 
 def add_title(feladatok: Union[List[str], str]) -> Dict:
@@ -27,15 +27,17 @@ def split(x: List, n: int) -> Iterator[List]:
         s += delta
 
 
-def get_students(course: canvasapi.course.Course, filter: Callable) -> List:  # type: ignore
+def get_students(course: canvasapi.course.Course, filter_fun: Callable) -> List:  # type: ignore
     return [
-        x.user_id for x in course.get_enrollments(type="StudentEnrollment") if filter(x)
+        x.user_id
+        for x in course.get_enrollments(type="StudentEnrollment")
+        if filter_fun(x)
     ]
 
 
 def add_visibility(feladatok: List, students: List) -> Union[List, Dict]:
     if len(feladatok) == 1:
-        return dict(fel=feladatok[0], visibility=None)
+        return {"fel": feladatok[0], "visibility": None}
 
     random.shuffle(students)
     return [
@@ -96,7 +98,7 @@ def del_assignments(course: canvasapi.course.Course, title: str) -> None:  # typ
 def publish_assignments(course: canvasapi.course.Course, title: str) -> None:  # type: ignore
     for x in course.get_assignments(search_term=title):
         print(f"publishing {x.name}, {x.id} ")
-        x.edit(assignment=dict(published=True))
+        x.edit(assignment={"published": True})
 
 
-all = [mk_fel, add_title, add_visibility, del_assignments, publish_assignments]
+_all = [mk_fel, add_title, add_visibility, del_assignments, publish_assignments]

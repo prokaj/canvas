@@ -1,4 +1,3 @@
-# import canvas
 from canvas.course import split
 
 
