@@ -1,4 +1,4 @@
-canvasapi==2.2.0
+canvasapi
 ipywidgets
 IPython
 tqdm
