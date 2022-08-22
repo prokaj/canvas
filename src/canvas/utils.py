@@ -78,8 +78,8 @@ def get_canvas_old(setting: Union[None, dict] = None) -> canvasapi.Canvas:  # ty
 
 def get_canvas() -> canvasapi.Canvas:  # type: ignore
     return canvasapi.Canvas(
-        access_token=os.environ.get("canvas", ""),
-        base_url=os.environ.get("base_url", ""),
+        access_token=os.environ.get("canvas_access_token", ""),
+        base_url=os.environ.get("canvas_base_url", ""),
     )
 
 
