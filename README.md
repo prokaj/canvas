@@ -16,13 +16,14 @@
 
 ---
 
-Automate some canvas related tasks
+Automate some canvas related tasks using jupyter notebook and markdown.
 
 ## Installation
 
 ```sh
 pip install canvas
 ```
+You also need `pandoc` to convert markdown to html.
 
 ## Development
 

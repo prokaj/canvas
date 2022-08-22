@@ -20,6 +20,13 @@ from typing import (
 
 import canvasapi  # type: ignore
 from tqdm.auto import tqdm  # type: ignore
+from yaml import safe_load as yaml_safe_load  # type: ignore
+
+
+def load_dotenv() -> None:
+    with open(".env.yml") as f:
+        dot_env = yaml_safe_load(f)
+    os.environ.update(dot_env)
 
 
 def all_app_in_path(app_name: str) -> Iterator[str]:
@@ -58,7 +65,7 @@ def read_setting(root: str = ".") -> Any:
     return setting
 
 
-def get_canvas(setting: Union[None, dict] = None) -> canvasapi.Canvas:  # type: ignore
+def get_canvas_old(setting: Union[None, dict] = None) -> canvasapi.Canvas:  # type: ignore
     if setting is None:
         setting = read_setting()
     setting = {
@@ -69,15 +76,19 @@ def get_canvas(setting: Union[None, dict] = None) -> canvasapi.Canvas:  # type: 
     return canvasapi.Canvas(**setting)
 
 
+def get_canvas() -> canvasapi.Canvas:  # type: ignore
+    return canvasapi.Canvas(
+        access_token=os.environ.get("canvas", ""),
+        base_url=os.environ.get("base_url", ""),
+    )
+
+
 def get_course(  # type: ignore
-    setting: Optional[Dict] = None, course_name: Optional[str] = None
+    config: Dict, course_name: Optional[str] = None
 ) -> canvasapi.course.Course:
-    if setting is None:
-        setting = read_setting()
-    course_data = setting if course_name is None else setting[course_name]
-    course = get_canvas(setting).get_course(course_data["course_id"])
-    if "data" in course_data:
-        course.local_data = course_data["data"]
+    course_data = config if course_name is None else config[course_name]
+    course = get_canvas().get_course(course_data["course_id"])
+    course.config = course_data
     return course
 
 
@@ -119,11 +130,10 @@ def upload_pdf(  # type: ignore
 
 
 def file_upload(  # type: ignore
+    course: canvasapi.course.Course,
     file: str,
     folder_name: Optional[str] = None,
-    course: Optional[canvasapi.course.Course] = None,
 ) -> canvasapi.file.File:
-    course = get_course() if course is None else course
     folders = course.get_folders()
     if folder_name is None:
         folder = folders[0]
@@ -137,11 +147,10 @@ def file_upload(  # type: ignore
     return folder.upload(file, on_duplicate="overwrite")
 
 
-def get_file(path: str) -> canvasapi.file.File:  # type: ignore
+def get_file(course: canvasapi.course.Course, path: str) -> canvasapi.file.File:  # type: ignore
     path_elements = path.split("/")
     file_name = path_elements.pop()
     path_elements = path_elements[::-1]
-    course = get_course()
     folders = course.get_folders()
     while path_elements:
         folders = folders[0].get_folders()
@@ -150,15 +159,15 @@ def get_file(path: str) -> canvasapi.file.File:  # type: ignore
     return [f for f in folders[0].get_files() if f.display_name == file_name][0]
 
 
-def get_file_id(path: str) -> int:
-    return int(get_file(path).id)
+def get_file_id(course: canvasapi.course.Course, path: str) -> int:  # type: ignore
+    return int(get_file(course, path).id)
 
 
 def get_path(x: canvasapi.file.File) -> str:  # type: ignore
     return str(x.full_name).replace("course files", "")
 
 
-def file_key(f: canvasapi.file.File, course: canvasapi.course.Course) -> str:  # type: ignore
+def file_key(course: canvasapi.course.Course, f: canvasapi.file.File) -> str:  # type: ignore
     key = f"{course.get_folder(f.folder_id).full_name}/{f.display_name}"
     return key.replace("course files/", "")
 
@@ -275,8 +284,7 @@ def upload_resources(assgn: Dict, course: canvasapi.course.Course) -> Dict:  # t
 
 
 def update_front_page(course: canvasapi.course.Course, root: str = "../") -> canvasapi.course.Course:  # type: ignore
-    read_setting()
-    index_md = course.local_data["index_local"]
+    index_md = course.config["index_local"]
     cmd = (
         f"cat  {index_md} |lua {root}preprocess_macros.lua"
         f"|{pandoc_cmd()} --mathml -t html --lua-filter {root}href_filter.lua"

@@ -4,7 +4,7 @@ from typing import Any, Callable, Dict, Generator, Iterator, List, Union
 
 import canvasapi  # type: ignore
 import ipywidgets as widgets  # type: ignore
-from IPython import display  # type: ignore
+from IPython.display import display  # type: ignore
 
 
 def mk_fel(feladatok: List[List[str]], prefix: str = "") -> List[str]:
@@ -27,7 +27,7 @@ def split(x: List, n: int) -> Iterator[List]:
         s += delta
 
 
-def get_students(course: canvasapi.course.Course, filter_fun: Callable) -> List:  # type: ignore
+def get_students(course: canvasapi.course.Course, filter_fun: Callable = lambda x: True) -> List:  # type: ignore
     return [
         x.user_id
         for x in course.get_enrollments(type="StudentEnrollment")
@@ -69,7 +69,7 @@ def confirm_delete(exs: List, callback: Callable) -> None:
 
     ex_iter = iter_fn()
 
-    def widget_cb(w: widgets.widgets, c: widgets.callback, b: Any) -> None:  # type: ignore
+    def widget_cb(w: widgets.widgets, c: Dict, b: Any) -> None:  # type: ignore
         if c.get("event", "") == "click":
             try:
                 ex_iter.send(w.get_interact_value())
@@ -85,7 +85,7 @@ def confirm_delete(exs: List, callback: Callable) -> None:
 
 
 def del_assignments(course: canvasapi.course.Course, title: str) -> None:  # type: ignore
-    def cb(x: canvasapi.Assignment) -> None:  # type: ignore
+    def cb(x: canvasapi.assignment.Assignment) -> None:  # type: ignore
         if x.has_submitted_submissions:
             print(f"not deleting {x.name}, {x.id}. there are submissions!")
         else:
@@ -101,4 +101,10 @@ def publish_assignments(course: canvasapi.course.Course, title: str) -> None:  #
         x.edit(assignment={"published": True})
 
 
-_all = [mk_fel, add_title, add_visibility, del_assignments, publish_assignments]
+__all__ = [
+    "mk_fel",
+    "add_title",
+    "add_visibility",
+    "del_assignments",
+    "publish_assignments",
+]
