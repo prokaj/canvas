@@ -4,7 +4,7 @@ from typing import Dict, Tuple
 
 import canvasapi  # type: ignore
 
-from canvas.canvasfs import result_to_canvasfs  # type: ignore
+from canvas.canvasfs import result_to_canvasfs
 
 
 def get_canvas_folder(  # type: ignore
