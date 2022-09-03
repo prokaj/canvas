@@ -103,7 +103,6 @@ def get_canvas_files(course: Course) -> dict:  # type: ignore
         if folder.files_count > 0:
             folder_name = folder.full_name.replace("course files/", "")
             for file in folder.get_files():
-                print(file.__dict__)
                 data[f"{folder_name}/{file.display_name}"] = file.id
 
     return data
