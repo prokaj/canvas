@@ -36,6 +36,7 @@ class LazyDict(dict):
     def __set__(self, instance: Any, value: dict) -> None:
         self.clear()
         self.update(value)
+        self._initialized = True
 
     def __set_name__(self, owner: type, name: str) -> None:
         self._name = f"_{name}"
