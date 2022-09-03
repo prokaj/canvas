@@ -125,7 +125,8 @@ def upload_pdf(  # type: ignore
         with tempfile.TemporaryDirectory() as d:
             tmpname = d + "/" + canvasname
             os.symlink(filename_, tmpname)
-            return folder.upload(tmpname, on_duplicate="overwrite")
+            file = folder.upload(tmpname, on_duplicate="overwrite")
+        return file
     return folder.upload(filename_, on_duplicate="overwrite")
 
 
