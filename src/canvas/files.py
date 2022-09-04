@@ -27,10 +27,15 @@ def normalize_path(path: str, default_dir: str, local: bool = True) -> Tuple[str
     return dirname, basename
 
 
-@result_to_canvasfs(which="files", input_var="canvas_file")
+@result_to_canvasfs(
+    which="files",
+    key_fn=lambda course, local_file, canvas_file: canvas_file,
+    id_fn=lambda value: value["id"],
+)
 def upload_file(  # type: ignore
     course: canvasapi.course.Course, local_file: str, canvas_file: str
 ) -> Dict:
+
     local_dir, local_name = normalize_path(
         local_file, course.config.get("local_default_dir", "")
     )

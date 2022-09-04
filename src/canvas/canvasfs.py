@@ -20,6 +20,7 @@ class LazyDict(dict):
         self._initialized = False
 
     def load(self) -> None:
+        logger.info("loading %s from %s", self._name, self._filename)
         if os.path.exists(self._filename):
             with open(self._filename) as f:
                 data = json.load(f)
@@ -29,29 +30,30 @@ class LazyDict(dict):
         self._initialized = True
 
     def __get__(self, instance: Any, owner: Any = None) -> LazyDict:
+        logger.info("getting: %s, initialized: %d", self._name, self._initialized)
         if not self._initialized:
             self.load()
         return self
 
     def __set__(self, instance: Any, value: dict) -> None:
+        logger.info("setting %s, initialized: %d", self._name, self._initialized)
         self.clear()
         self.update(value)
         self._initialized = True
 
     def __set_name__(self, owner: type, name: str) -> None:
         self._name = f"_{name}"
-        fields = getattr(owner, "_fields", [])
-        fields.append(name)
-        owner._fields = fields  # type: ignore
+        owner._fields.append(name)  # type: ignore
 
     def save(self) -> None:
         logger.info("saving data=%s", repr(self))
         with open(self._filename, "w") as f:
             json.dump(self, f)
 
-    def __delete__(self, instance: Any) -> None:
-        self.save()
-        logger.info("%s is being deleted on %s", self._name, str(instance))
+    def reset(self) -> None:
+        logger.info("resetting%s, initialized: %d", self._name, self._initialized)
+        self.clear()
+        self._initialized = False
 
 
 class CanvasFS:
@@ -59,43 +61,31 @@ class CanvasFS:
     files = LazyDict("./.files.json")
     assignments = LazyDict("./.assignments.json")
     quizzes = LazyDict("./.quizzes.json")
+    _fields: list[str] = []
 
     def __init__(self) -> None:
         atexit.register(self.save_state)
 
+    def _apply(self, fun: Callable) -> None:
+        for name in self._fields:
+            fun(type(self).__dict__[name], name)
+
     def save_state(self) -> None:
-        self.files.save()
-        self.assignments.save()
-        self.quizzes.save()
+        self._apply(lambda obj, name: obj.save())
 
-    def clear(self) -> None:
-        self.files.clear()
-        self.assignments.clear()
-        self.quizzes.clear()
-
-    def reset(self, **kwargs: dict) -> None:
-        for name in ["files", "assignments", "quizzes"]:
+    def update(self, **kwargs: dict) -> None:
+        def update(obj: LazyDict, name: str) -> None:
             if name in kwargs and isinstance(kwargs[name], dict):
-                setattr(self, name, kwargs[name])
+                obj.__set__(self, kwargs[name])
+
+        self._apply(update)
+
+    def reset(self) -> None:
+        self._apply(lambda obj, name: obj.reset())
 
     def __del__(self) -> None:
         self.save_state()
         logger.info("CanvasFS is being deleted")
-
-
-def result_to_canvasfs(which: str, input_var: str) -> Callable:
-    @wraps
-    def wrapper(f: Callable) -> Callable:
-        def g(*args: list, **kwargs: dict) -> dict:
-            idx = kwargs.get(input_var, None)
-            value: dict = f(*args, **kwargs)
-            ld = getattr(CanvasFS, which)
-            ld[idx] = value["id"]
-            return value
-
-        return g
-
-    return wrapper
 
 
 def get_canvas_files(course: Course) -> dict:  # type: ignore
@@ -136,6 +126,28 @@ def get_canvas_quizzes(course: Course) -> dict:  # type: ignore
 
 
 canvasfs = CanvasFS()
+
+
+def result_to_canvasfs(
+    which: str, key_fn: Callable, id_fn: Callable = lambda value: value["id"]
+) -> Callable:
+    def wrapper(f: Callable) -> Callable:
+        @wraps(f)
+        def g(*args: list, **kwargs: dict) -> Any:
+            idx = key_fn(*args, **kwargs)
+            value = f(*args, **kwargs)
+            ld = getattr(canvasfs, which)
+            ld[idx] = id_fn(value)
+            logger.info(
+                "result_to_canvas_wrapper: canvasfs.%s._initialized = %d",
+                which,
+                ld._initialized,
+            )
+            return value
+
+        return g
+
+    return wrapper
 
 
 def update_canvasfs(course: Course) -> None:  # type: ignore
