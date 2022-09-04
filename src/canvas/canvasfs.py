@@ -159,6 +159,10 @@ def result_to_canvasfs(
 
 
 def update_canvasfs(course: Course) -> None:  # type: ignore
+    if len(cfs) == 0:
+        raise IndexError(
+            "update_canvasfs must be used within `with canvasfs(): ` context"
+        )
     cfs[-1].files = get_canvas_files(course)
     cfs[-1].assignments = get_canvas_assignments(course)
     cfs[-1].quizzes = get_canvas_quizzes(course)
