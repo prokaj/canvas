@@ -161,6 +161,8 @@ def test_get_canvas_quizzes(mock_course) -> None:  # type: ignore
             assert cfs.quizzes == {}
             assert cfs.assignments == {}
             assert cfs.files == {}
+        with pytest.raises(IndexError):
+            update_canvasfs(course)
 
 
 def test_resolve() -> None:
