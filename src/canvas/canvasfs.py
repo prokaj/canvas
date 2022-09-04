@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import atexit
 import json
 import logging
 import os
+from contextlib import contextmanager
 from functools import lru_cache, partial, wraps
-from typing import Any, Callable
+from typing import Any, Callable, Generator
 
 from canvasapi.course import Course  # type: ignore
 
@@ -14,46 +14,46 @@ logging.basicConfig()
 logger.setLevel(logging.DEBUG)
 
 
-class LazyDict(dict):
+class LazyDict:
     def __init__(self, filename: str) -> None:
         self._filename = filename
-        self._initialized = False
 
-    def load(self) -> None:
+    def _load(self) -> dict:
         logger.info("loading %s from %s", self._name, self._filename)
         if os.path.exists(self._filename):
             with open(self._filename) as f:
                 data = json.load(f)
+                assert isinstance(data, dict)
         else:
             data = {}
-        super().__init__(data)
-        self._initialized = True
+        return data  # type: ignore
 
-    def __get__(self, instance: Any, owner: Any = None) -> LazyDict:
-        logger.info("getting: %s, initialized: %d", self._name, self._initialized)
-        if not self._initialized:
-            self.load()
-        return self
+    def __get__(self, instance: Any, owner: Any = None) -> dict:
+        logger.info("getting: %s", self._name)
+        instance_dict = instance.__dict__
+        if self._name not in instance_dict:
+            instance_dict[self._name] = self._load()
+        return instance_dict[self._name]  # type: ignore
 
     def __set__(self, instance: Any, value: dict) -> None:
-        logger.info("setting %s, initialized: %d", self._name, self._initialized)
-        self.clear()
-        self.update(value)
-        self._initialized = True
+        logger.info("setting %s", self._name)
+        instance.__dict__[self._name] = value
 
     def __set_name__(self, owner: type, name: str) -> None:
         self._name = f"_{name}"
         owner._fields.append(name)  # type: ignore
 
-    def save(self) -> None:
-        logger.info("saving data=%s", repr(self))
-        with open(self._filename, "w") as f:
-            json.dump(self, f)
+    def _save(self, instance: Any) -> None:
+        if self._name in instance.__dict__:
+            data = instance.__dict__.get(self._name)
+            logger.info("saving LazyDict(%s)", self._name)
+            with open(self._filename, "w") as f:
+                json.dump(data, f)
 
-    def reset(self) -> None:
-        logger.info("resetting%s, initialized: %d", self._name, self._initialized)
-        self.clear()
-        self._initialized = False
+    def _reset(self, instance: Any) -> None:
+        if self._name in instance.__dict__:
+            logger.info("resetting %s", self._name)
+            instance.__dict__.pop(self._name)
 
 
 class CanvasFS:
@@ -63,15 +63,12 @@ class CanvasFS:
     quizzes = LazyDict("./.quizzes.json")
     _fields: list[str] = []
 
-    def __init__(self) -> None:
-        atexit.register(self.save_state)
-
     def _apply(self, fun: Callable) -> None:
         for name in self._fields:
             fun(type(self).__dict__[name], name)
 
     def save_state(self) -> None:
-        self._apply(lambda obj, name: obj.save())
+        self._apply(lambda obj, name: obj._save(self))
 
     def update(self, **kwargs: dict) -> None:
         def update(obj: LazyDict, name: str) -> None:
@@ -81,11 +78,26 @@ class CanvasFS:
         self._apply(update)
 
     def reset(self) -> None:
-        self._apply(lambda obj, name: obj.reset())
+        self._apply(lambda obj, name: obj._reset(self))
 
-    def __del__(self) -> None:
-        self.save_state()
-        logger.info("CanvasFS is being deleted")
+    def resolve(self, ptype: str, path: str) -> int:
+        idx: int = getattr(self, ptype)[path]
+        return idx
+
+
+@contextmanager
+def canvasfs(path: str = ".") -> Generator:
+    cwd = os.getcwd()
+    os.chdir(path)
+    canvasfs = CanvasFS()
+    cfs.append(canvasfs)
+    try:
+        yield canvasfs
+
+    finally:
+        cfs.pop()
+        canvasfs.save_state()
+        os.chdir(cwd)
 
 
 def get_canvas_files(course: Course) -> dict:  # type: ignore
@@ -125,7 +137,7 @@ def get_canvas_quizzes(course: Course) -> dict:  # type: ignore
     return data
 
 
-canvasfs = CanvasFS()
+cfs: list[CanvasFS] = []
 
 
 def result_to_canvasfs(
@@ -136,13 +148,9 @@ def result_to_canvasfs(
         def g(*args: list, **kwargs: dict) -> Any:
             idx = key_fn(*args, **kwargs)
             value = f(*args, **kwargs)
-            ld = getattr(canvasfs, which)
+            ld = getattr(cfs[-1], which)
             ld[idx] = id_fn(value)
-            logger.info(
-                "result_to_canvas_wrapper: canvasfs.%s._initialized = %d",
-                which,
-                ld._initialized,
-            )
+            logger.info("result_to_canvas_wrapper: canvasfs.%s", which)
             return value
 
         return g
@@ -151,6 +159,6 @@ def result_to_canvasfs(
 
 
 def update_canvasfs(course: Course) -> None:  # type: ignore
-    canvasfs.files = get_canvas_files(course)
-    canvasfs.assignments = get_canvas_assignments(course)
-    canvasfs.quizzes = get_canvas_quizzes(course)
+    cfs[-1].files = get_canvas_files(course)
+    cfs[-1].assignments = get_canvas_assignments(course)
+    cfs[-1].quizzes = get_canvas_quizzes(course)
