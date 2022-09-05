@@ -1,7 +1,8 @@
 import datetime
+import re
 import unicodedata
 from dataclasses import dataclass
-from typing import Any, Generator, List, Tuple
+from typing import Any, Generator, List, Optional, Tuple
 
 import yaml  # type: ignore
 
@@ -23,7 +24,9 @@ vocab = {
 
 
 def normalize_key(key: str) -> str:
-    key = noaccent(key.lower())
+    key = key.strip()
+    key = re.sub(r"\s+", " ", key)
+    key = noaccent(key).lower()
     key = vocab.get(key, key)
     return key
 
@@ -53,7 +56,7 @@ class Section:
         self.week = data["week"]
         self.header = header
 
-    def get(self, attr: str, default: Any) -> Any:
+    def get(self, attr: str, default: Optional[Any] = None) -> Any:
         if hasattr(self, attr):
             return getattr(self, attr)
         return getattr(self.header, attr, default)

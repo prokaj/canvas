@@ -10,8 +10,6 @@ from typing import Any, Callable, Generator
 from canvasapi.course import Course  # type: ignore
 
 logger = logging.getLogger("canvas")
-logging.basicConfig()
-logger.setLevel(logging.DEBUG)
 
 
 class LazyDict:
@@ -85,6 +83,10 @@ class CanvasFS:
         return idx
 
 
+# used by the context manager below!
+cfs: list[CanvasFS] = []
+
+
 @contextmanager
 def canvasfs(path: str = ".") -> Generator:
     cwd = os.getcwd()
@@ -135,9 +137,6 @@ def get_canvas_quizzes(course: Course) -> dict:  # type: ignore
         data[quize.title] = quize.id
 
     return data
-
-
-cfs: list[CanvasFS] = []
 
 
 def result_to_canvasfs(
