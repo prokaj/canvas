@@ -10,7 +10,7 @@ logger = logging.getLogger("canvas")
 
 class SavedDict(dict):
     def __init__(self, filename: str, default: Optional[dict] = None):
-        self._filename = filename
+        self._filename = os.path.abspath(filename)
         self._needinit = True
         self._default = default if default is not None else {}
 
@@ -31,7 +31,7 @@ class SavedDict(dict):
 
     def __repr__(self) -> str:
         if self._needinit:
-            return f"{type(self).__name__}('{self._filename}')"
+            return f'{type(self).__name__}("{self._filename}")'
         else:
             return super().__repr__()
 

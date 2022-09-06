@@ -68,10 +68,10 @@ section_formats = {
 
 
 def test_saveddict() -> None:
-    with tmp_working_dir():
+    with tmp_working_dir() as tmp:
         formats = SavedDict("latex_formats.json", default=section_formats)
         assert len(formats) == 0
-        assert repr(formats) == "SavedDict('latex_formats.json')"
+        assert repr(formats) == f'SavedDict("{tmp}/latex_formats.json")'
         assert formats["paper"] == section_formats["paper"]
         assert set(formats.keys()) == {"canvas", "paper"}
         assert repr(formats) == repr(section_formats)
@@ -87,12 +87,13 @@ def test_saveddict() -> None:
 
 
 def test_saved_course_data(caplog) -> None:  # type: ignore
-    with tmp_working_dir():
+    with tmp_working_dir() as tmp:
         scd = SavedCourseData(files=".files.json", others=".others.json")  # type: ignore
         assert scd.files == {}  # type: ignore
         assert sorted(scd._dicts()) == sorted([("files", {}), ("others", {})])
         assert (
-            repr(scd) == 'SavedCourseData(files=".files.json", others=".others.json")'
+            repr(scd)
+            == f'SavedCourseData(files="{tmp}/.files.json", others="{tmp}/.others.json")'
         )
 
         d = {"/a/b.pdf": 1, "/c": 2}
