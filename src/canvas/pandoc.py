@@ -21,7 +21,7 @@ def get_app_version(app: str) -> Tuple[int, ...]:
     )
 
 
-@functools.lru_cache
+@functools.lru_cache()
 def pandoc_cmd() -> str:
     pandoc = sorted(
         ((get_app_version(p), p) for p in all_app_in_path("pandoc")), reverse=True
