@@ -4,8 +4,6 @@ from typing import Dict, Tuple
 
 import canvasapi  # type: ignore
 
-from canvas.canvasfs import result_to_canvasfs
-
 
 def get_canvas_folder(  # type: ignore
     course: canvasapi.course.Course, path: str
@@ -27,11 +25,6 @@ def normalize_path(path: str, default_dir: str, local: bool = True) -> Tuple[str
     return dirname, basename
 
 
-@result_to_canvasfs(
-    which="files",
-    key_fn=lambda course, local_file, canvas_file: canvas_file,
-    id_fn=lambda value: value["id"],
-)
 def upload_file(  # type: ignore
     course: canvasapi.course.Course, local_file: str, canvas_file: str
 ) -> Dict:

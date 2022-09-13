@@ -1,4 +1,3 @@
-import functools
 import json
 import os
 import subprocess
@@ -9,12 +8,10 @@ from typing import (
     Callable,
     Dict,
     Generator,
-    Iterator,
     List,
     Optional,
     Sequence,
     TextIO,
-    Tuple,
     Union,
 )
 
@@ -22,41 +19,13 @@ import canvasapi  # type: ignore
 from tqdm.auto import tqdm  # type: ignore
 from yaml import safe_load as yaml_safe_load  # type: ignore
 
+from canvas.pandoc import pandoc_cmd, pandoc_list, pandoc_text
+
 
 def load_dotenv() -> None:
     with open(".env.yml") as f:
         dot_env = yaml_safe_load(f)
     os.environ.update(dot_env)
-
-
-def all_app_in_path(app_name: str) -> Iterator[str]:
-    for d in os.environ["PATH"].split(":") + ["/home/prokaj/local/bin"]:
-        p = f"{d}{os.path.sep}{app_name}"
-        if os.path.exists(p):
-            yield p
-
-
-def get_app_version(app: str) -> Tuple[int, ...]:
-    res = subprocess.run(app + " --version", shell=True, stdout=subprocess.PIPE)
-    return tuple(
-        map(int, res.stdout.decode("utf-8").split("\n")[0].split()[1].split("."))
-    )
-
-
-@functools.lru_cache
-def pandoc_cmd() -> str:
-    pandoc = sorted(
-        ((get_app_version(p), p) for p in all_app_in_path("pandoc")), reverse=True
-    )
-    if not pandoc:
-        raise FileNotFoundError("pandoc not found")
-
-    version, path = pandoc[0]
-    if version[0] < 2:
-        raise FileNotFoundError(
-            f'only too old pandoc version ({".".join(map(str,version))}) found: {path}'
-        )
-    return path
 
 
 def read_setting(root: str = ".") -> Any:
@@ -215,7 +184,7 @@ def lua_table(d: Dict, file: TextIO) -> None:
         if isinstance(v, dict):
             lua_table(v, file)
         else:
-            file.write(f'"{v}"')
+            file.write(repr(v))
         file.write(",")
     file.write("}\n")
 
@@ -296,41 +265,6 @@ def update_front_page(course: canvasapi.course.Course, root: str = "../") -> can
         return
     html = out.stdout.decode("utf-8")
     return course.edit_front_page(wiki_page={"title": "Kurzusleírás", "body": html})
-
-
-def pandoc_text(
-    txt: str,
-    src_format: str = "",
-    out_format: str = "html",
-    root: str = "../",
-) -> str:
-    cmd = (
-        f"lua {root}preprocess_macros.lua"
-        f"| {pandoc_cmd()} -f {src_format} --mathml -t {out_format} --lua-filter={root}href_filter.lua"
-    )
-    out = subprocess.run(
-        cmd,
-        shell=True,
-        input=txt.encode("utf8"),
-        capture_output=True,
-    )
-    if out.returncode != 0:
-        print(out.stderr)
-        return ""
-    html = out.stdout.decode("utf-8")
-    return html
-
-
-def pandoc_list(
-    lst: List[str],
-    src_format: str = "",
-    out_format: str = "html",
-    root: str = "../",
-) -> List[str]:
-    sep = "0123456789abcdefghijklmnopqrstuvwxyz"
-    txt = f"\n\n{sep}\n\n".join(lst)
-    html = pandoc_text(txt).split(f"\n<p>{sep}</p>\n")
-    return html
 
 
 qargs = "question_name question_text question_type points_possible".split(" ")

@@ -35,15 +35,15 @@ def get_students(course: canvasapi.course.Course, filter_fun: Callable = lambda 
     ]
 
 
-def add_visibility(feladatok: List, students: List) -> Union[List, Dict]:
-    if len(feladatok) == 1:
-        return {"fel": feladatok[0], "visibility": None}
+def add_visibility(exs: List[dict], students: List) -> List[dict]:
+    if len(exs) == 1:
+        exs[0]["visibility"] = None
 
-    random.shuffle(students)
-    return [
-        {"fel": ex, "visibility": st}
-        for ex, st in zip(feladatok, split(students, len(feladatok)))
-    ]
+    else:
+        random.shuffle(students)
+        for ex, st in zip(exs, split(students, len(exs))):
+            ex["visibility"] = st
+    return exs
 
 
 def confirm_delete(exs: List, callback: Callable) -> None:
