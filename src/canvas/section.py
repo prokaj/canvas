@@ -128,6 +128,7 @@ def pandoc_sections(  # type: ignore
     header: Header,
     sections: List[Section],
     until: Optional[datetime.date] = None,
+    **kwargs: Any,
 ) -> str:
     """It assumes that yaml has a header with a template field.
     The template is Jinja2 template that can be rendered using
@@ -142,6 +143,12 @@ def pandoc_sections(  # type: ignore
 
     text = t.render(sections=sections, header=header, until=until)
 
-    text = pandoc_with_options(text=add_metablock(course, text), filters=["href.lua"])
+    text = pandoc_with_options(
+        text=add_metablock(course, text),
+        src_format="markdown+link_attributes",
+        out_format="html5",
+        filters=["href.lua"],
+        **kwargs,
+    )
 
     return text

@@ -50,7 +50,9 @@ def get_canvas_files(course: Course) -> dict:  # type: ignore
     data = {}
     for folder in course.get_folders():
         if folder.files_count > 0:
-            folder_name = folder.full_name.replace("course files", "")
+            folder_name = folder.full_name
+            folder_name = folder_name.replace("course files/", "")
+            folder_name = folder_name.replace("course files", "")
             for file in folder.get_files():
                 data[f"{folder_name}/{file.display_name}"] = file.id
 
@@ -65,12 +67,12 @@ def get_canvas_assignment_group_name(  # type: ignore
 
 
 def get_canvas_assignments(course: Course) -> dict:  # type: ignore
-    data = {}
+    data: dict = {}
     get_group_name = lru_cache()(partial(get_canvas_assignment_group_name, course))
 
     for assgn in course.get_assignments():
         idx = f"{get_group_name(group_id=assgn.assignment_group_id)}/{assgn.name}"
-        data[idx] = assgn.id
+        data.setdefault(idx, []).append(assgn.id)
 
     return data
 

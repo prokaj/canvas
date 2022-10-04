@@ -37,7 +37,7 @@ def pandoc_cmd() -> str:
     return path
 
 
-def run_cmd_on_text(cmd: str, text: str) -> str:
+def run_cmd_on_text(cmd: str, text: str, out_encoding: str = "utf-8") -> str:
     proc = subprocess.run(
         cmd,
         shell=True,
@@ -45,21 +45,24 @@ def run_cmd_on_text(cmd: str, text: str) -> str:
         capture_output=True,
     )
     if proc.returncode != 0:
-        logger.error(proc.stderr.decode("utf-8"))
+        logger.error(cmd)
+        logger.error(proc.stderr.decode(out_encoding))
         return ""
     if proc.stderr:
-        logger.warning(proc.stderr.decode("utf-8"))
-    return proc.stdout.decode("utf-8")
+        logger.warning(cmd)
+        logger.warning(proc.stderr.decode(out_encoding))
+    return proc.stdout.decode(out_encoding)
 
 
 def pandoc_cmd_with_options(**kwargs: Any) -> str:
     options = {
         "src_format": "markdown",
         "out_format": "html",
-        "filters": ["href_filter.lua"],
+        "filters": ["href.lua"],
         "options": ["--mathml"],
     }
 
+    options["options"].extend(kwargs.pop("options", []))  # type: ignore
     options.update(kwargs)
 
     filters = " ".join(f"-L {filter_name}" for filter_name in options["filters"])
