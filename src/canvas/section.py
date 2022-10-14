@@ -2,7 +2,7 @@ import datetime
 import re
 import unicodedata
 from dataclasses import dataclass
-from typing import Any, Generator, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import yaml  # type: ignore
 from canvasapi.course import Course  # type: ignore
@@ -49,22 +49,23 @@ class Header:
         for k, v in header.items():
             setattr(self, normalize_key(k), v)
 
-    def next_week(self, date: datetime.date, week: int) -> Tuple[datetime.date, int]:
-        while True:
+    def next_week(self, date: datetime.date) -> Tuple[datetime.date, int]:
+        delta = 7 - ((date - self.first_section).days % 7)
+        date = datetime.timedelta(days=delta) + date
+        while date in self.breaks:
             date = datetime.timedelta(days=7) + date
-            week += 1
-            if date not in self.breaks:
-                break
+        week = 1 + ((date - self.first_section).days // 7)
         return date, week
 
 
 class Section:
     def __init__(self, section: dict, header: Header, data: dict):
+        self.date = data["date"]
+
         if section is not None:
             for k, v in section.items():
                 setattr(self, normalize_key(k), v)
 
-        self.date = data["date"]
         self.serial = data["serial"]
         self.week = data["week"]
         self.header = header
@@ -78,33 +79,21 @@ class Section:
         return self.get(key)
 
     def next_week(self) -> Tuple[datetime.date, int]:
-        date = self.date
-        week = self.week
-        while True:
-            date = datetime.timedelta(days=7) + date
-            week += 1
-            if date not in self.header.breaks:
-                break
-        return date, week
-
-
-def data_iter(header: Header) -> Generator:
-    date = header.first_section
-    serial = 1
-    week = 1
-    while not hasattr(header, "last_section") or date <= header.last_section:
-        yield {"date": date, "serial": serial, "week": week}
-        date, week = header.next_week(date, serial)
-        serial += 1
+        return self.header.next_week(self.date)
 
 
 def read_section(filename: str) -> Tuple[Header, List[Section]]:
     with open(filename) as f:
         lst = yaml.safe_load_all(f)
         header = Header(next(lst))
-        sections = [
-            Section(sec, header, data) for sec, data in zip(lst, data_iter(header))
-        ]
+        sections = []
+        date = header.first_section
+        week = 1
+        for serial, sec in enumerate(lst, start=1):
+            sections.append(
+                Section(sec, header, {"date": date, "serial": serial, "week": week})
+            )
+            date, week = sections[-1].next_week()
 
     return header, sections
 
