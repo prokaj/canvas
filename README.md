@@ -1,36 +1,41 @@
 # canvas
-
+<!--
 [![PyPI](https://img.shields.io/pypi/v/canvas?style=flat-square)](https://pypi.python.org/pypi/canvas/)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/canvas?style=flat-square)](https://pypi.python.org/pypi/canvas/)
 [![PyPI - License](https://img.shields.io/pypi/l/canvas?style=flat-square)](https://pypi.python.org/pypi/canvas/)
 [![Coookiecutter - Wolt](https://img.shields.io/badge/cookiecutter-Wolt-00c2e8?style=flat-square&logo=cookiecutter&logoColor=D4AA00&link=https://github.com/woltapp/wolt-python-package-cookiecutter)](https://github.com/woltapp/wolt-python-package-cookiecutter)
-
+ -->
 
 ---
 
-**Documentation**: [https://prokaj.github.io/canvas](https://prokaj.github.io/canvas)
+<!-- **Documentation**: [https://prokaj.github.io/canvas](https://prokaj.github.io/canvas) -->
 
 **Source Code**: [https://github.com/prokaj/canvas](https://github.com/prokaj/canvas)
 
-**PyPI**: [https://pypi.org/project/canvas/](https://pypi.org/project/canvas/)
+<!-- **PyPI**: [https://pypi.org/project/canvas/](https://pypi.org/project/canvas/) -->
 
 ---
 
 Automate some canvas related tasks using jupyter notebook and markdown.
 
+<!-- I use this package on a daily basis to administer my classes in Canvas LMS. -->
+
 ## Installation
 
+You can only install this package from github.
+
 ```sh
-pip install canvas
+pip install https://github.com/prokaj/canvas.git
 ```
-You also need `pandoc` to convert markdown to html.
+
+You also need `pandoc` to convert markdown to html. I use `lua-filters` to help this step.
 
 ## Development
 
 * Clone this repository
 * Requirements:
   * [Poetry](https://python-poetry.org/)
-  * Python 3.7+
+  * Python 3.8+
 * Create a virtual environment and install the dependencies
 
 ```sh
