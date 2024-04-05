@@ -28,7 +28,6 @@ def normalize_path(path: str, default_dir: str, local: bool = True) -> Tuple[str
 def upload_file(  # type: ignore
     course: canvasapi.course.Course, local_file: str, canvas_file: str
 ) -> Dict:
-
     local_dir, local_name = normalize_path(
         local_file, course.config.get("local_default_dir", "")
     )

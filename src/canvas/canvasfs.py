@@ -55,7 +55,6 @@ class LazyDict:
 
 
 class CanvasFS:
-
     files = LazyDict("./.files.json")
     assignments = LazyDict("./.assignments.json")
     quizzes = LazyDict("./.quizzes.json")
