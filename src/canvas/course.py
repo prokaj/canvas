@@ -95,8 +95,10 @@ def del_assignments(course: canvasapi.course.Course, title: str) -> None:  # typ
     confirm_delete(course.get_assignments(search_term=title), cb)
 
 
-def publish_assignments(course: canvasapi.course.Course, title: str) -> None:  # type: ignore
+def publish_assignments(course: canvasapi.course.Course, title: str, exclude: Union[str, None] = None) -> None:  # type: ignore
     for x in course.get_assignments(search_term=title):
+        if exclude is not None and x.name.startswith(exclude):
+            continue
         print(f"publishing {x.name}, {x.id} ")
         x.edit(assignment={"published": True})
 
